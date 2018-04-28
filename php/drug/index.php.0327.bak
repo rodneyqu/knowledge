@@ -1,0 +1,55 @@
+<?php
+header('content-type:application:json;charset=utf8');  
+header('Access-Control-Allow-Origin:*');  
+header('Access-Control-Allow-Methods:POST');  
+header('Access-Control-Allow-Headers:x-requested-with,content-type'); 
+require('../publicfunc/sql_func.php');
+//use publicfunc\sqlfunc as sqlfunc;
+$mysql_obj = new sqlfunc();
+$pageNum = $_POST['pageNum'];
+$pageSize = $_POST['pageSize'];
+$DrugClassName_en = $_POST['DrugClassName_en'];
+$DrugID = $_POST['DrugID'];//传Symbol搜素
+$DrugName_cn = $_POST['DrugName_cn'];
+$DrugName_en=$_POST['DrugName_en'];
+$FDAStatus = $_POST['FDAStatus'];
+$CFDAStatus = $_POST['CFDAStatus'];
+
+
+if(!($DrugClassName_en === '') && !($DrugClassName_en === null)){
+	$find_DrugClassID['DrugClassName_en'] = $DrugClassName_en;
+	$DrugClassID_find = $mysql_obj->selectq("DrugClass",array("DrugClassID"),$find_DrugClassID);
+	$find_DrugID['DrugClassID']= $DrugClassID_find[0]['DrugClassID'];//根据DrugClassName查找到ClassID作为条件
+	$DrugID_find = $mysql_obj->selectq("Drug_DrugClass",array("DrugID"),$find_DrugID);
+	$where['DrugClassName_en'] = $DrugID_find;
+}
+
+
+$where['DrugID'] = $DrugID;
+$where['DrugName_cn'] = $DrugName_cn;
+$where['DrugName_en'] = $DrugName_en;
+$where['FDAStatus'] = $FDAStatus;
+$where['CFDAStatus'] = $CFDAStatus;
+
+
+
+
+$result_all = $mysql_obj->getpageq("Drug",$where,$pageNum,$pageSize);
+
+foreach ($result_all['data'] as $k => $v){
+	$find_DrugClass['DrugID'] = $v['DrugID'];
+	$DrugClassID_find= $mysql_obj->selectq("Drug_DrugClass",array("DrugClassID"),$find_DrugClass);//根据DrugID去Drug_DrugClass表查找DrugClassID
+	if(!empty($DrugClassID_find)){
+		foreach($DrugClassID_find as $m =>$n){
+			$find_DrugClassName['DrugClassID'] = $n['DrugClassID'];
+			//$find_DrugClassName['DrugClassID']= $find_DrugClassName['DrugClassID']?$find_DrugClassName['DrugClassID']:99999999;
+			$DrugClass_name_find = $mysql_obj->selectq("DrugClass",array("DrugClassName_en"),$find_DrugClassName);
+			$DrugClassName_en_find[] = $DrugClass_name_find[0][DrugClassName_en];
+		}
+	}	
+	$result_all['data'][$k]['DrugClassName_en'] = $DrugClassName_en_find?$DrugClassName_en_find:array();
+	unset($DrugClassName_en_find);
+} 
+
+echo json_encode($result_all);
+?>
